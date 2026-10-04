@@ -18,6 +18,10 @@ class HandDetector:
         return frame
 
     def get_landmarks(self):
-        if self.results.multi_hand_landmarks:
+        if getattr(self, "results", None) and self.results.multi_hand_landmarks:
             return self.results.multi_hand_landmarks
         return None
+
+    def close(self):
+        """Release MediaPipe resources when camera processing ends."""
+        self.hands.close()

@@ -9,6 +9,9 @@ class GestureClassifier:
         self.finger_tips = [8, 12, 16, 20]
         self.thumb_tip = 4
         self.last_triggered = None
+        self.last_action_at = 0.0
+        self.action_cooldown = 1.0
+        self.pinch_was_active = False
 
     def classify(self, landmarks):
         if not landmarks:
@@ -44,11 +47,11 @@ class GestureClassifier:
             return "Unknown"
 
     def trigger_action(self, gesture):
-        if gesture == self.last_triggered:
+        now = time.monotonic()
+        if gesture == self.last_triggered or now - self.last_action_at < self.action_cooldown:
             return
         self.last_triggered = gesture
-        print(f"Triggering action for: {gesture}")
-        time.sleep(1)
+        self.last_action_at = now
 
         if gesture == "Scissors":
             pyautogui.screenshot("screenshot.png")
@@ -59,6 +62,7 @@ class GestureClassifier:
 
     def control_mouse(self, landmarks):
         if not landmarks:
+            self.pinch_was_active = False
             return
 
         hand = landmarks[0].landmark
@@ -73,11 +77,13 @@ class GestureClassifier:
         x = max(10, min(screen_width - 10, x))
         y = max(10, min(screen_height - 10, y))
 
-        pyautogui.moveTo(x, y)
+        pyautogui.moveTo(x, y, _pause=False)
 
         pinch_distance = abs(index_tip.x - thumb_tip.x) + abs(index_tip.y - thumb_tip.y)
-        if pinch_distance < 0.05:
+        pinch_active = pinch_distance < 0.05
+        if pinch_active and not self.pinch_was_active:
             pyautogui.click()
+        self.pinch_was_active = pinch_active
 
         fingers_up = sum([
             hand[8].y < hand[6].y,
